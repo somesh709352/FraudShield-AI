@@ -306,6 +306,30 @@ class TestGraphMathematicalProperties:
         assert detector.graph.has_edge("sender@upi", "receiver@upi")
         assert detector.graph.nodes["sender@upi"]["account_ids"] == ["bank-account-1"]
         assert detector.graph.nodes["sender@upi"]["upi_ids"] == ["sender@upi"]
+
+    def test_cycle_enumeration_is_bounded_and_reports_truncation(self):
+        detector = GraphFraudDetector()
+        timestamp = datetime.now()
+        nodes = [f"account-{index}" for index in range(7)]
+        transactions = [
+            Transaction(
+                transaction_id=f"tx-{source}-{target}",
+                sender_account=source,
+                receiver_account=target,
+                amount=100.0,
+                timestamp=timestamp,
+                transaction_type=TransactionType.UPI,
+            )
+            for source in nodes
+            for target in nodes
+            if source != target
+        ]
+
+        detector.build_graph(transactions)
+        result = detector.detect_cycles(max_cycle_length=6)
+
+        assert result.cycle_count == 500
+        assert result.truncated is True
     
     def test_degree_centrality_formula(self):
         """Verify degree centrality formula: C_D(v) = deg(v) / (n-1)"""

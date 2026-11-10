@@ -46,6 +46,7 @@ export interface CycleDetectionResult {
   cycles: string[][]
   cycle_count: number
   suspicious_cycles: string[][]
+  truncated: boolean
 }
 
 export interface SuspiciousPathResult {
