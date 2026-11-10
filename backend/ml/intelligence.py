@@ -57,6 +57,7 @@ def analyze_anomaly(request: Dict[str, Any]) -> Dict[str, Any]:
             "median_inter_transaction_hours": median(gaps_hours) if gaps_hours else None,
         },
         "candidate": {"amount": candidate, "z_score": zscore},
+        "history_amounts": amounts,
         "signals": {
             "outside_iqr_range": outside_iqr,
             "exceeds_zscore_threshold": exceeds_zscore,
@@ -78,6 +79,13 @@ def analyze_bayesian(request: Dict[str, Any]) -> Dict[str, Any]:
         raise ValueError("training_data must include both fraud and legitimate examples")
     if not evidence:
         raise ValueError("evidence must include at least one boolean feature")
+    missing_features = [
+        feature
+        for feature in evidence
+        if any(feature not in sample["features"] for sample in samples)
+    ]
+    if missing_features:
+        raise ValueError(f"training_data is missing evidence features: {', '.join(missing_features)}")
 
     prior = len(fraud_rows) / len(samples)
     log_odds = log(prior / (1 - prior))
@@ -215,11 +223,16 @@ def prioritize_cases(request: Dict[str, Any]) -> Dict[str, Any]:
         if used <= budget and (value > best_classical[0] or (value == best_classical[0] and used < best_classical[1])):
             best_classical = (value, used, list(selection))
         residual = budget - used
-        if residual >= 0:
-            constraint_gap = 0
-        else:
-            constraint_gap = -residual
-        energy = -value + penalty * constraint_gap * constraint_gap
+        slack_value = residual if 0 <= residual < 1 << slack_bits else 0
+        slack_selection = [(slack_value >> bit) & 1 for bit in range(slack_bits)]
+        assignment = list(selection) + slack_selection
+        energy = sum(qubo[variables[index]] * bit for index, bit in enumerate(assignment))
+        for index in range(len(assignment)):
+            if not assignment[index]:
+                continue
+            for other in range(index + 1, len(assignment)):
+                if assignment[other]:
+                    energy += qubo[f"{variables[index]},{variables[other]}"]
         if energy < best_qubo[0]:
             best_qubo = (energy, value, used, list(selection))
     runtime_seconds = perf_counter() - started_at

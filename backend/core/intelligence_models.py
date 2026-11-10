@@ -61,6 +61,13 @@ class QuantumRequest(BaseModel):
     cases: List[InvestigationCase] = Field(min_length=1, max_length=18)
     resource_limit: int = Field(ge=0)
 
+    @model_validator(mode="after")
+    def validate_case_ids(self):
+        case_ids = [case.case_id for case in self.cases]
+        if len(set(case_ids)) != len(case_ids):
+            raise ValueError("case_id values must be unique")
+        return self
+
 
 class RiskRequest(BayesianRequest):
     low_max: float = Field(default=0.33, ge=0, le=1)

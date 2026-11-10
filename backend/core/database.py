@@ -23,7 +23,7 @@ class TransactionRecord(Base):
     transaction_type = Column(String)
     sender_upi_id = Column(String, nullable=True)
     receiver_upi_id = Column(String, nullable=True)
-    metadata = Column(Text, default="{}")
+    metadata_json = Column("metadata", Text, default="{}")
     created_at = Column(DateTime, default=datetime.utcnow)
     
     def to_dict(self):
@@ -36,7 +36,7 @@ class TransactionRecord(Base):
             "transaction_type": self.transaction_type,
             "sender_upi_id": self.sender_upi_id,
             "receiver_upi_id": self.receiver_upi_id,
-            "metadata": json.loads(self.metadata) if self.metadata else {}
+            "metadata": json.loads(self.metadata_json) if self.metadata_json else {}
         }
 
 

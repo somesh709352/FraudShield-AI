@@ -26,6 +26,18 @@ env/
 ENV/
 .venv/
 
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Frontend build
+frontend/dist/
+frontend/build/
+frontend/.vite/
+
 # IDE
 .vscode/
 .idea/
