@@ -65,6 +65,7 @@ class CycleDetectionResult(BaseModel):
     cycles: List[List[str]]
     cycle_count: int
     suspicious_cycles: List[List[str]]
+    truncated: bool = False
 
 
 class SuspiciousPathResult(BaseModel):

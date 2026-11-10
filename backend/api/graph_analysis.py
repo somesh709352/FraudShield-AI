@@ -181,9 +181,15 @@ class GraphFraudDetector:
                 cycles=[], cycle_count=0, suspicious_cycles=[]
             )
         
+        cycles = []
+        truncated = False
+        max_reported_cycles = 500
         try:
-            cycles = list(nx.simple_cycles(self.graph))
-            cycles = [c for c in cycles if len(c) <= max_cycle_length]
+            for cycle in nx.simple_cycles(self.graph, length_bound=max_cycle_length):
+                if len(cycles) == max_reported_cycles:
+                    truncated = True
+                    break
+                cycles.append(cycle)
             
             suspicious_cycles = []
             for cycle in cycles:
@@ -203,11 +209,13 @@ class GraphFraudDetector:
         except (nx.NetworkXNoCycle, RecursionError):
             cycles = []
             suspicious_cycles = []
+            truncated = False
         
         return CycleDetectionResult(
             cycles=cycles,
             cycle_count=len(cycles),
-            suspicious_cycles=suspicious_cycles
+            suspicious_cycles=suspicious_cycles,
+            truncated=truncated,
         )
     
     def detect_suspicious_paths(self, max_path_length: int = 4) -> SuspiciousPathResult:

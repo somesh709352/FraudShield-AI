@@ -89,6 +89,7 @@ export function GraphAnalysis() {
           value={riskIndicators.suspicious_cycle_count}
           change={`${riskIndicators.total_cycles} total cycles`}
           changeType={riskIndicators.suspicious_cycle_count > 0 ? 'negative' : 'positive'}
+          subtitle={analysis.cycles.truncated ? 'Cycle search capped at 500 results' : 'All bounded cycles enumerated'}
           icon={<GitBranch className="w-6 h-6" />}
         />
         <MetricCard
@@ -225,7 +226,7 @@ export function GraphAnalysis() {
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="card">
           <div className="card-header">
-            <h3 className="text-lg font-semibold text-gray-900">Detected Cycles ({analysis.cycles.cycle_count})</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Detected Cycles ({analysis.cycles.cycle_count}{analysis.cycles.truncated ? '+' : ''})</h3>
           </div>
           <div className="card-body">
             {analysis.cycles.suspicious_cycles.length > 0 ? (
