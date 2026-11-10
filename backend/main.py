@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from backend.core.config import settings
 from backend.core.database import init_db
 from backend.api.graph_routes import router as graph_router
+from backend.api.intelligence_routes import router as intelligence_router
 
 
 @asynccontextmanager
@@ -29,6 +30,7 @@ app.add_middleware(
 )
 
 app.include_router(graph_router)
+app.include_router(intelligence_router)
 
 
 @app.get("/")
@@ -48,10 +50,10 @@ async def health_check():
         "timestamp": "2026-11-10T09:35:00Z",
         "services": {
             "graph_analysis": "available",
-            "bayesian_analysis": "planned",
-            "statistical_anomaly": "planned",
-            "threshold_optimization": "planned",
-            "quantum_lab": "planned",
-            "risk_engine": "planned"
+            "bayesian_analysis": "available_with_training_data",
+            "statistical_anomaly": "available",
+            "threshold_optimization": "available_with_validation_data",
+            "quantum_lab": "experimental_classical_qubo_baseline",
+            "risk_engine": "available_with_training_data"
         }
     }
