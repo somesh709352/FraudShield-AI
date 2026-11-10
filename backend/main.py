@@ -1,11 +1,15 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
+from pathlib import Path
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
-from backend.core.config import settings
-from backend.core.database import init_db
-from backend.api.graph_routes import router as graph_router
-from backend.api.intelligence_routes import router as intelligence_router
+from core.config import settings
+from core.database import init_db
+from api.graph_routes import router as graph_router
+from api.intelligence_routes import router as intelligence_router
 
 
 @asynccontextmanager
@@ -32,9 +36,17 @@ app.add_middleware(
 app.include_router(graph_router)
 app.include_router(intelligence_router)
 
+FRONTEND_DIST = Path(__file__).resolve().parents[1] / "frontend" / "dist"
+FRONTEND_INDEX = FRONTEND_DIST / "index.html"
+FRONTEND_ASSETS = FRONTEND_DIST / "assets"
+if FRONTEND_ASSETS.is_dir():
+    app.mount("/assets", StaticFiles(directory=FRONTEND_ASSETS), name="assets")
+
 
 @app.get("/")
 async def root():
+    if FRONTEND_INDEX.is_file():
+        return FileResponse(FRONTEND_INDEX)
     return {
         "name": settings.app_name,
         "version": settings.app_version,
@@ -47,7 +59,7 @@ async def root():
 async def health_check():
     return {
         "status": "healthy",
-        "timestamp": "2026-11-10T09:35:00Z",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "services": {
             "graph_analysis": "available",
             "bayesian_analysis": "available_with_training_data",
@@ -55,5 +67,14 @@ async def health_check():
             "threshold_optimization": "available_with_validation_data",
             "quantum_lab": "experimental_classical_qubo_baseline",
             "risk_engine": "available_with_training_data"
-        }
+        },
     }
+
+
+@app.get("/{path:path}", include_in_schema=False)
+async def frontend_routes(path: str):
+    if path.startswith("api/"):
+        raise HTTPException(status_code=404, detail="Not Found")
+    if FRONTEND_INDEX.is_file():
+        return FileResponse(FRONTEND_INDEX)
+    raise HTTPException(status_code=404, detail="Not Found")

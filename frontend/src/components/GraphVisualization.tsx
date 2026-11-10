@@ -28,11 +28,10 @@ export function GraphVisualization({
 }: GraphVisualizationProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const cyRef = useRef<cytoscape.Core | null>(null)
-  const [initialized, setInitialized] = useState(false)
   const [activeLayout, setActiveLayout] = useState<NonNullable<GraphVisualizationProps['layout']>>(layout)
 
   useEffect(() => {
-    if (!containerRef.current || initialized) return
+    if (!containerRef.current) return
 
     const cy = cytoscape({
       container: containerRef.current,
@@ -130,43 +129,13 @@ export function GraphVisualization({
           },
         },
       ],
-      layout: {
-        name: activeLayout,
-        animate: true,
-        animationDuration: 500,
-        fit: true,
-        padding: 50,
-        ...(layout === 'dagre' && {
-          rankDir: 'LR',
-          nodeSep: 50,
-          rankSep: 80,
-          edgeSep: 20,
-        }),
-        ...(layout === 'cose-bilkent' && {
-          idealEdgeLength: 100,
-          nodeOverlap: 20,
-          refresh: 20,
-          fit: true,
-          padding: 50,
-          randomize: false,
-          componentSpacing: 100,
-          nodeRepulsion: 400000,
-          edgeElasticity: 100,
-          nestingFactor: 5,
-          gravity: 80,
-          numIter: 2500,
-          tile: true,
-          tillingPaddingVertical: 10,
-          tillingPaddingHorizontal: 10,
-        }),
-      },
+      layout: { name: 'cose', animate: false, fit: true, padding: 50 },
       minZoom: 0.1,
       maxZoom: 2,
       wheelSensitivity: 0.2,
     })
 
     cyRef.current = cy
-    setInitialized(true)
 
     cy.on('tap', 'node', (evt) => {
       const nodeId = evt.target.id()
@@ -182,9 +151,8 @@ export function GraphVisualization({
     return () => {
       cy.destroy()
       cyRef.current = null
-      setInitialized(false)
     }
-  }, [initialized])
+  }, [onNodeSelect])
 
   useEffect(() => {
     if (!cyRef.current) return
@@ -229,7 +197,35 @@ export function GraphVisualization({
     } else {
       cy.$(':selected').unselect()
     }
-  }, [nodes, edges, selectedNode, highlightNodes, highlightEdges, activeLayout])
+  }, [nodes, edges, selectedNode, highlightNodes, highlightEdges])
+
+  useEffect(() => {
+    const cy = cyRef.current
+    if (!cy) return
+    cy.layout({
+      name: activeLayout,
+      animate: true,
+      animationDuration: 500,
+      fit: true,
+      padding: 50,
+      ...(activeLayout === 'dagre' && { rankDir: 'LR', nodeSep: 50, rankSep: 80, edgeSep: 20 }),
+      ...(activeLayout === 'cose-bilkent' && {
+        idealEdgeLength: 100,
+        nodeOverlap: 20,
+        refresh: 20,
+        randomize: false,
+        componentSpacing: 100,
+        nodeRepulsion: 400000,
+        edgeElasticity: 100,
+        nestingFactor: 5,
+        gravity: 80,
+        numIter: 2500,
+        tile: true,
+        tillingPaddingVertical: 10,
+        tillingPaddingHorizontal: 10,
+      }),
+    }).run()
+  }, [activeLayout])
 
   return (
     <div className="card">

@@ -1,14 +1,14 @@
 from fastapi import APIRouter, HTTPException
 
-from backend.core.config import settings
-from backend.core.intelligence_models import (
+from core.config import settings
+from core.intelligence_models import (
     AnomalyRequest,
     BayesianRequest,
     QuantumRequest,
     RiskRequest,
     ThresholdRequest,
 )
-from backend.ml.intelligence import (
+from ml.intelligence import (
     analyze_anomaly,
     analyze_bayesian,
     evaluate_risk,

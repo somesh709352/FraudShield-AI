@@ -2,10 +2,10 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 from datetime import datetime
 
-from backend.core.models import (
+from core.models import (
     Transaction, GraphAnalysisRequest, GraphAnalysisResponse
 )
-from backend.api.graph_analysis import GraphFraudDetector, create_graph_detector
+from api.graph_analysis import GraphFraudDetector, create_graph_detector
 
 router = APIRouter(prefix="/api/v1/graph", tags=["Graph Fraud Analysis"])
 

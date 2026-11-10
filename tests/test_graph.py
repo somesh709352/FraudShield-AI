@@ -273,6 +273,39 @@ class TestGraphFraudDetector:
 
 class TestGraphMathematicalProperties:
     """Test mathematical correctness of graph algorithms."""
+
+    def test_betweenness_uses_amount_as_strength_not_distance(self):
+        detector = GraphFraudDetector()
+        timestamp = datetime.now()
+        transactions = [
+            Transaction(transaction_id="tx1", sender_account="A", receiver_account="B", amount=1000, timestamp=timestamp, transaction_type=TransactionType.UPI),
+            Transaction(transaction_id="tx2", sender_account="B", receiver_account="C", amount=1000, timestamp=timestamp, transaction_type=TransactionType.UPI),
+            Transaction(transaction_id="tx3", sender_account="A", receiver_account="C", amount=1, timestamp=timestamp, transaction_type=TransactionType.UPI),
+        ]
+
+        detector.build_graph(transactions)
+        centrality = detector.calculate_centrality()
+
+        assert centrality.betweenness_centrality["B"] > 0
+
+    def test_upi_ids_are_graph_nodes_with_account_aliases(self):
+        detector = GraphFraudDetector()
+        transaction = Transaction(
+            transaction_id="upi-transfer",
+            sender_account="bank-account-1",
+            receiver_account="bank-account-2",
+            sender_upi_id="sender@upi",
+            receiver_upi_id="receiver@upi",
+            amount=250.0,
+            timestamp=datetime.now(),
+            transaction_type=TransactionType.UPI,
+        )
+
+        detector.build_graph([transaction])
+
+        assert detector.graph.has_edge("sender@upi", "receiver@upi")
+        assert detector.graph.nodes["sender@upi"]["account_ids"] == ["bank-account-1"]
+        assert detector.graph.nodes["sender@upi"]["upi_ids"] == ["sender@upi"]
     
     def test_degree_centrality_formula(self):
         """Verify degree centrality formula: C_D(v) = deg(v) / (n-1)"""

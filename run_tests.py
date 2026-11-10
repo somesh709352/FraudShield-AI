@@ -4,32 +4,17 @@ Test runner for FraudShield AI Mathematical Intelligence Engine
 """
 import sys
 import subprocess
+from pathlib import Path
 
 
 def run_tests():
-    """Run all tests with coverage."""
-    test_files = [
-        "tests/test_graph.py",
-    ]
-    
-    for test_file in test_files:
-        print(f"\n{'='*60}")
-        print(f"Running {test_file}")
-        print(f"{'='*60}")
-        
-        result = subprocess.run(
-            [sys.executable, "-m", "pytest", test_file, "-v", "--tb=short"],
-            cwd="C:\\Users\\Somesh R U\\eclipse-workspace\\BloodBankManagementSystem\\src\\bloodbank\\fraudshield ai"
-        )
-        
-        if result.returncode != 0:
-            print(f"FAILED: {test_file}")
-            return False
-    
-    print("\n" + "="*60)
-    print("ALL TESTS PASSED")
-    print("="*60)
-    return True
+    """Run every project test from this checkout."""
+    root = Path(__file__).resolve().parent
+    result = subprocess.run(
+        [sys.executable, "-m", "pytest", "tests", "-v", "--tb=short"],
+        cwd=root,
+    )
+    return result.returncode == 0
 
 
 if __name__ == "__main__":

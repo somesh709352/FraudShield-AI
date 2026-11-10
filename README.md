@@ -1,207 +1,136 @@
-# FraudShield AI - Mathematical Intelligence Engine
+# FraudShield AI
 
-AI-powered financial fraud detection platform for Indian digital payments (UPI, bank transfers) with advanced mathematical algorithms, statistical models, graph theory, and experimental quantum optimization.
+An analyst-facing mathematical intelligence workspace for exploring transaction-network patterns, statistical anomalies, evidence-based probability, validation thresholds, and experimental investigation prioritization. It does not connect to financial institutions or block payments.
 
-## 🚀 Features
+## Architecture
 
-### Mathematical Intelligence Modules
+- `backend/main.py`: FastAPI application and route registration.
+- `backend/api/graph_analysis.py`: NetworkX graph construction and analysis.
+- `backend/api/graph_routes.py`: graph API endpoints under `/api/v1/graph`.
+- `backend/api/intelligence_routes.py`: anomaly, Bayesian, threshold, QUBO, and risk endpoints under `/api/v1/intelligence`.
+- `backend/ml/intelligence.py`: dependency-light calculation functions.
+- `backend/core/intelligence_models.py`: validated request contracts.
+- `backend/core/database.py`: existing SQLite transaction and analysis tables; these request-based intelligence endpoints do not persist their inputs or results.
+- `frontend/src/pages/`: routed dashboard modules.
+- `frontend/src/components/MathematicalWorkbench.tsx`: editable JSON input, synthetic examples, API result display, charts, and method notes.
+- `frontend/src/components/GraphVisualization.tsx`: interactive Cytoscape graph and node details.
 
-| Module | Description | Algorithms |
-|--------|-------------|------------|
-| **Graph Fraud Analysis** | Network-based fraud detection | Degree/Betweenness/PageRank centrality, Louvain communities, Johnson's cycle detection, suspicious path analysis |
-| **Bayesian Probability** | Fraud probability with evidence | Naive Bayes, Logistic Regression, Random Forest, XGBoost probability comparison |
-| **Statistical Anomaly Detection** | Behavioral deviation analysis | Z-score, IQR, Moving averages, Entropy-based analysis |
-| **Threshold Optimization** | Cost-sensitive decision tuning | FP/FN cost minimization, F1-optimization, Youden's J, PR-AUC |
-| **Quantum Lab (Experimental)** | Investigation prioritization | QUBO formulation, Simulated Annealing, QAOA simulation |
-| **Model Performance** | ML model evaluation | AUC-ROC, PR-AUC, Brier score, ECE, PSI, Feature importance |
+## Run Locally
 
-### Dashboard Pages
+From the project directory, create and activate a Python environment, then install the backend dependencies:
 
-1. **Overview** - Real-time metrics, module cards, transaction distribution
-2. **Graph Analysis** - Interactive network visualization (Cytoscape), centrality rankings, community detection
-3. **Bayesian Analysis** - Evidence-based probability calculation, model comparison, calibration
-4. **Anomaly Detection** - Per-account statistical analysis, timeline visualization, Z-score/IQR methods
-5. **Threshold Optimization** - Cost curves, PR curves, confusion matrices, sensitivity analysis
-6. **Quantum Lab** - QUBO matrix, method comparison, case selection optimization
-7. **Model Performance** - PR curves, calibration plots, feature importance, population stability
-8. **Settings** - Thresholds, API, notifications, appearance configuration
-
-## 🏗 Architecture
-
-```
-fraudshield-ai/
-├── backend/                 # FastAPI Python backend
-│   ├── api/
-│   │   ├── graph_analysis.py    # NetworkX graph fraud detection
-│   │   ├── graph_routes.py      # REST endpoints
-│   │   ├── bayesian.py          # Bayesian probability (planned)
-│   │   ├── statistics.py        # Statistical anomaly detection (planned)
-│   │   ├── optimization.py      # Threshold optimization (planned)
-│   │   ├── quantum_lab.py       # QUBO/QAOA (planned)
-│   │   └── risk_engine.py       # Unified risk scoring (planned)
-│   ├── core/
-│   │   ├── config.py            # Pydantic settings
-│   │   ├── models.py            # Pydantic schemas
-│   │   └── database.py          # SQLAlchemy models
-│   ├── ml/                      # ML pipeline integration point
-│   └── main.py                  # FastAPI app
-├── frontend/                  # React + TypeScript + Vite
-│   ├── src/
-│   │   ├── pages/               # Dashboard pages
-│   │   ├── components/          # Reusable components (Charts, Graph)
-│   │   └── services/            # API client
-│   └── package.json
-├── tests/                       # Pytest test suites
-└── requirements.txt             # Python dependencies
-```
-
-## 📦 Installation
-
-### Backend
-
-```bash
+```powershell
+py -3 -m venv .venv
+.venv\Scripts\Activate.ps1
 cd backend
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r ../requirements.txt
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+python -m pip install -r ..\requirements.txt
+python -m uvicorn main:app --reload --port 8000
 ```
 
-### Frontend
+In a second terminal:
 
-```bash
+```powershell
 cd frontend
 npm install
 npm run dev
 ```
 
-Visit `http://localhost:3000` (frontend) and `http://localhost:8000/docs` (API docs).
+Open `http://localhost:3000`. The Vite development server proxies `/api` requests to `http://localhost:8000`. FastAPI's interactive API documentation is at `http://localhost:8000/docs`.
 
-## 🧪 Testing
+## Tests
 
-```bash
-# Backend tests
-cd backend
-python -m pytest ../tests/ -v
+From the project directory:
 
-# Frontend tests
-cd frontend
-npm test
+```powershell
+python -m pytest -q
 ```
 
-## 📊 Mathematical Foundations
+Or run `python run_tests.py`.
 
-### Graph Theory
-- **Degree Centrality**: C_D(v) = deg(v) / (n-1)
-- **Betweenness Centrality**: C_B(v) = Σ σ_st(v) / σ_st
-- **PageRank**: PR(p_i) = (1-d)/N + d Σ PR(p_j)/L(p_j)
-- **Louvain Communities**: Modularity maximization Q = 1/2m Σ (A_ij - k_i k_j / 2m) δ(c_i, c_j)
-- **Cycle Detection**: Johnson's algorithm for elementary circuits
-- **Suspicious Paths**: Multi-source → common target detection
+## Deploy on Render
 
-### Bayesian Inference
-- **Bayes' Theorem**: P(Fraud|E) = P(E|Fraud) × P(Fraud) / P(E)
-- **Naive Bayes**: P(Fraud|E₁...Eₙ) ∝ P(Fraud) Π P(Eᵢ|Fraud)
-- **Model Calibration**: Platt scaling / Isotonic regression
+The root `Dockerfile` builds the frontend and serves it from FastAPI as one web service. Connect this repository to Render and create a Blueprint from `render.yaml`; Render will build the image and use `/health` for health checks. The GitHub Actions workflow runs the backend tests and frontend production build on pushes and pull requests.
 
-### Statistical Anomaly Detection
-- **Z-Score**: z = |x - μ| / σ
-- **IQR Method**: Outlier if x < Q1 - 1.5×IQR or x > Q3 + 1.5×IQR
-- **Moving Average**: MA_t = (x_t + ... + x_t-n) / n
-- **Entropy**: H = -Σ p(x) log p(x)
+The free Render filesystem is ephemeral. This project currently uses local SQLite and does not persist analysis history, so do not treat that database as production storage. A persistent managed database is required before storing operational records.
 
-### Threshold Optimization
-- **Cost Function**: Minimize C_FN × FN + C_FP × FP
-- **F1-Score**: 2 × Precision × Recall / (Precision + Recall)
-- **Youden's J**: Sensitivity + Specificity - 1
-- **PR-AUC**: Area under Precision-Recall curve
+## API
 
-### Quantum Optimization (Experimental)
-- **QUBO**: Minimize xᵀQx where Q_ij = -v_i (diag) + 2P·h_i·h_j (off-diag)
-- **Constraint**: Penalty P(Σ h_i x_i - B)² for budget B
-- **QAOA**: |ψ⟩ = Π exp(-iβH_M)exp(-iγH_C)|+⟩
+All JSON inputs are validated by Pydantic. Invalid or incomplete evidence returns a client error rather than a fabricated result.
 
-## 🔧 Configuration
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `POST` | `/api/v1/graph/analyze` | Full graph analysis |
+| `POST` | `/api/v1/graph/centrality` | Degree, betweenness, and PageRank |
+| `POST` | `/api/v1/graph/communities` | Community detection |
+| `POST` | `/api/v1/graph/cycles` | Directed cycle detection |
+| `POST` | `/api/v1/graph/suspicious-paths` | Short paths to shared beneficiaries |
+| `POST` | `/api/v1/graph/components` | Connected components |
+| `POST` | `/api/v1/intelligence/anomaly` | Historical amount and timing statistics |
+| `POST` | `/api/v1/intelligence/bayesian` | Smoothed Bayesian evidence calculation |
+| `POST` | `/api/v1/intelligence/thresholds/optimize` | Cost-sensitive validation threshold comparison |
+| `POST` | `/api/v1/intelligence/quantum/prioritize` | Small exact case-selection and QUBO baseline |
+| `POST` | `/api/v1/intelligence/risk/evaluate` | Configurable review band over supplied Bayesian evidence |
+| `GET` | `/api/v1/intelligence/status` | Configured capability status |
 
-Key settings in `backend/core/config.py`:
+### Statistical Anomaly Example
 
-```python
-graph_min_transactions: int = 5
-graph_suspicious_threshold: float = 0.7
-stats_zscore_threshold: float = 3.0
-stats_iqr_multiplier: float = 1.5
-bayesian_prior_fraud: float = 0.01
-optimization_cost_fn: float = 10000.0
-optimization_cost_fp: float = 100.0
-quantum_shots: int = 1024
-```
-
-## 📡 API Endpoints
-
-### Graph Analysis
-```
-POST /api/v1/graph/analyze          # Full graph analysis
-POST /api/v1/graph/centrality       # Centrality metrics
-POST /api/v1/graph/communities      # Community detection
-POST /api/v1/graph/cycles           # Cycle detection
-POST /api/v1/graph/suspicious-paths # Suspicious paths
-POST /api/v1/graph/components       # Connected components
-GET  /api/v1/graph/health           # Health check
-```
-
-### Request Format
 ```json
 {
-  "transactions": [
-    {
-      "transaction_id": "TX001",
-      "sender_account": "ACC001",
-      "receiver_account": "ACC002",
-      "amount": 5000.0,
-      "timestamp": "2026-01-01T10:00:00Z",
-      "transaction_type": "UPI"
-    }
+  "history": [
+    { "amount": 500, "timestamp": "2026-10-25T09:00:00+05:30", "beneficiary": "shop-a" },
+    { "amount": 1200, "timestamp": "2026-10-26T14:00:00+05:30", "beneficiary": "shop-b" },
+    { "amount": 900, "timestamp": "2026-10-27T10:00:00+05:30", "beneficiary": "shop-a" }
   ],
-  "min_transactions": 5,
-  "suspicious_threshold": 0.7
+  "candidate_amount": 80000,
+  "candidate_timestamp": "2026-10-28T02:25:00+05:30",
+  "candidate_beneficiary": "new-payee",
+  "zscore_threshold": 3,
+  "iqr_multiplier": 1.5
 }
 ```
 
-## ⚠️ Important Disclaimers
+The response contains the actual mean, median, population standard deviation, quartiles, IQR bounds, recent moving average, observed transaction frequency, beneficiary entropy, candidate z-score, and evidence flags. A zero historical standard deviation yields a null z-score when the candidate differs from the constant baseline; IQR remains available.
 
-1. **Not a Criminal Detection System**: This platform identifies *suspicious patterns requiring investigation*. It does NOT label any account holder as a criminal. Graph patterns can have legitimate explanations (payroll, family transfers, marketplace settlements).
+### Bayesian Example
 
-2. **Experimental Quantum Module**: The Quantum Lab uses classical simulators only. No quantum hardware required. Results are for research purposes. Do not use for production decisions without rigorous validation.
+```json
+{
+  "training_data": [
+    { "fraud": false, "features": { "new_beneficiary": false, "unusual_amount": false } },
+    { "fraud": false, "features": { "new_beneficiary": true, "unusual_amount": false } },
+    { "fraud": true, "features": { "new_beneficiary": true, "unusual_amount": true } },
+    { "fraud": true, "features": { "new_beneficiary": false, "unusual_amount": true } }
+  ],
+  "evidence": { "new_beneficiary": true, "unusual_amount": true },
+  "smoothing_alpha": 1
+}
+```
 
-3. **Synthetic Data**: Demo uses generated synthetic transactions. Replace with real data for production use.
+The posterior uses the empirical class prior and symmetric additive smoothing for Bernoulli feature likelihoods. Contributions are returned as log-likelihood ratios. The conditional-independence assumption is stated in the response. The probability is **not independently calibrated**, and demonstration data is synthetic.
 
-4. **Model Validation**: All ML metrics computed on held-out validation/test sets. No data leakage. Transaction IDs never used as features.
+### Threshold Optimization
 
-## 🛣 Roadmap
+Provide equal-length `labels` and `scores` from a held-out `validation` split. Scores must be in `[0,1]`, and both classes must be represented. Optional `thresholds`, `cost_fn`, and `cost_fp` values control the comparison. The response includes confusion counts, precision, recall, F1, average precision (stepwise PR-AUC), and expected cost at each threshold. Do not select or report the threshold as a guarantee of prevention.
 
-- [ ] Bayesian probability API implementation
-- [ ] Statistical anomaly detection API
-- [ ] Threshold optimization API
-- [ ] Quantum Lab API with Qiskit integration
-- [ ] Unified risk engine combining all modules
-- [ ] Real-time streaming analysis (Kafka/Flink)
-- [ ] Model registry & A/B testing framework
-- [ ] Advanced explainability (SHAP, LIME)
-- [ ] Multi-tenant support
-- [ ] Audit logging & compliance reports
+### Quantum Lab
 
-## 📄 License
+`POST /api/v1/intelligence/quantum/prioritize` accepts up to 18 unique cases, each with a nonnegative expected value and a positive integer resource cost, plus a resource limit. It returns an exact classical constrained optimum, a QUBO matrix and exact QUBO-assignment baseline. This is exponential enumeration for small experiments. QAOA is reported unavailable; no quantum advantage is claimed.
 
-MIT License - See LICENSE file for details.
+## Mathematical Methods
 
-## 🤝 Contributing
+- **Degree centrality:** $C_D(v)=deg(v)/(n-1)$.
+- **Betweenness centrality:** $C_B(v)=\sum_{s\ne v\ne t}\sigma_{st}(v)/\sigma_{st}$.
+- **PageRank:** $PR(v)=(1-d)/n+d\sum_{u\to v}PR(u)/L(u)$.
+- **Anomaly z-score:** $z=(x-\mu)/\sigma$; **IQR fences:** $[Q_1-1.5IQR,Q_3+1.5IQR]$.
+- **Bayesian update:** posterior odds equal prior odds times the smoothed likelihood ratios of the supplied evidence.
+- **Threshold cost:** $C_{FN}FN+C_{FP}FP$; the threshold search uses validation data only.
+- **Case-selection QUBO:** $E(x,s)=-\sum_i v_ix_i+\lambda(\sum_i r_ix_i+s-B)^2$, where the binary slack encodes unused capacity.
 
-1. Fork the repository
-2. Create feature branch
-3. Add tests for new functionality
-4. Ensure all tests pass
-5. Submit pull request
+## Current Limits
 
-## 📞 Support
-
-For issues and questions, please open a GitHub issue.
+- No trained logistic regression, random forest, XGBoost, or combined meta-model is configured. The risk endpoint returns the supplied-data Bayesian posterior with configurable review bands; it is not a calibrated multi-source production model.
+- Graph and anomaly measures are indicators for analyst review. They do not determine intent or identify a criminal.
+- The Bayesian estimate depends on supplied labeled examples and the naive conditional-independence assumption.
+- Threshold metrics are only as representative as the supplied validation split. No held-out institution dataset is bundled.
+- The QUBO module is experimental and classical. QAOA and paid quantum hardware are not required or claimed.
+- The frontend's bundled examples are synthetic. No financial institution integration, automated payment blocking, or persistent analysis history is configured.

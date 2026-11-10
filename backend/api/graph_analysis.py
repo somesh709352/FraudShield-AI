@@ -26,12 +26,12 @@ from datetime import datetime
 from collections import defaultdict
 import numpy as np
 
-from backend.core.models import (
+from core.models import (
     Transaction, GraphNode, GraphEdge, GraphAnalysisRequest,
     CentralityMetrics, CommunityDetectionResult, CycleDetectionResult,
     SuspiciousPathResult, ConnectedComponentsResult, GraphAnalysisResponse
 )
-from backend.core.config import settings
+from core.config import settings
 
 
 class GraphFraudDetector:
@@ -56,7 +56,8 @@ class GraphFraudDetector:
         
         node_stats = defaultdict(lambda: {
             'tx_count': 0, 'total_sent': 0.0, 'total_received': 0.0,
-            'first_seen': None, 'last_seen': None
+            'first_seen': None, 'last_seen': None,
+            'account_ids': set(), 'upi_ids': set()
         })
         
         edge_data = defaultdict(lambda: {
@@ -64,16 +65,16 @@ class GraphFraudDetector:
         })
         
         for tx in transactions:
-            sender = tx.sender_account
-            receiver = tx.receiver_account
+            sender = tx.sender_upi_id or tx.sender_account
+            receiver = tx.receiver_upi_id or tx.receiver_account
             amount = tx.amount
             timestamp = tx.timestamp
             
-            sender_upi = tx.sender_upi_id or sender
-            receiver_upi = tx.receiver_upi_id or receiver
-            
             node_stats[sender]['tx_count'] += 1
             node_stats[sender]['total_sent'] += amount
+            node_stats[sender]['account_ids'].add(tx.sender_account)
+            if tx.sender_upi_id:
+                node_stats[sender]['upi_ids'].add(tx.sender_upi_id)
             node_stats[sender]['first_seen'] = min(
                 node_stats[sender]['first_seen'] or timestamp, timestamp
             )
@@ -83,6 +84,9 @@ class GraphFraudDetector:
             
             node_stats[receiver]['tx_count'] += 1
             node_stats[receiver]['total_received'] += amount
+            node_stats[receiver]['account_ids'].add(tx.receiver_account)
+            if tx.receiver_upi_id:
+                node_stats[receiver]['upi_ids'].add(tx.receiver_upi_id)
             node_stats[receiver]['first_seen'] = min(
                 node_stats[receiver]['first_seen'] or timestamp, timestamp
             )
@@ -101,6 +105,8 @@ class GraphFraudDetector:
             )
         
         for node_id, stats in node_stats.items():
+            stats['account_ids'] = sorted(stats['account_ids'])
+            stats['upi_ids'] = sorted(stats['upi_ids'])
             self.graph.add_node(node_id, **stats)
             self.reverse_graph.add_node(node_id, **stats)
         
@@ -120,7 +126,13 @@ class GraphFraudDetector:
             )
         
         deg_cent = nx.degree_centrality(self.graph)
-        bet_cent = nx.betweenness_centrality(self.graph, weight='weight')
+        distance_graph = nx.DiGraph()
+        distance_graph.add_nodes_from(self.graph.nodes(data=True))
+        distance_graph.add_edges_from(
+            (source, target, {'distance': 1.0 / data['weight']})
+            for source, target, data in self.graph.edges(data=True)
+        )
+        bet_cent = nx.betweenness_centrality(distance_graph, weight='distance')
         pr = nx.pagerank(self.graph, weight='weight', alpha=0.85)
         
         return CentralityMetrics(
@@ -342,7 +354,7 @@ class GraphFraudDetector:
             GraphNode(
                 id=node_id,
                 label=node_id[:20],
-                type="account",
+                type="upi" if data.get('upi_ids') else "account",
                 risk_score=0.0,
                 transaction_count=data.get('tx_count', 0),
                 total_amount=data.get('total_sent', 0) + data.get('total_received', 0),

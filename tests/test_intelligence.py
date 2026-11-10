@@ -165,3 +165,68 @@ def test_anomaly_api_returns_calculated_result():
     assert body["statistics"]["mean"] == 200
     assert body["candidate"]["amount"] == 80000
     assert body["status"] == "unusual_pattern"
+
+
+def test_health_endpoint_reports_current_timestamp():
+    response = TestClient(app).get("/health")
+
+    assert response.status_code == 200
+    assert response.json()["timestamp"]
+
+
+def test_bayesian_api_returns_prior_and_contributions():
+    response = TestClient(app).post("/api/v1/intelligence/bayesian", json={
+        "training_data": [
+            {"fraud": True, "features": {"new_beneficiary": True}},
+            {"fraud": False, "features": {"new_beneficiary": False}},
+        ],
+        "evidence": {"new_beneficiary": True},
+    })
+
+    assert response.status_code == 200
+    assert response.json()["prior_probability"] == 0.5
+    assert response.json()["evidence_contributions"][0]["feature"] == "new_beneficiary"
+
+
+def test_threshold_api_requires_validation_split():
+    response = TestClient(app).post("/api/v1/intelligence/thresholds/optimize", json={
+        "split": "validation",
+        "labels": [0, 1, 0, 1],
+        "scores": [0.1, 0.8, 0.2, 0.9],
+    })
+
+    assert response.status_code == 200
+    assert response.json()["split"] == "validation"
+    assert "expected_cost" in response.json()["selected_metrics"]
+
+
+def test_quantum_api_marks_classical_experiment():
+    response = TestClient(app).post("/api/v1/intelligence/quantum/prioritize", json={
+        "resource_limit": 2,
+        "cases": [
+            {"case_id": "A", "expected_value": 4, "resource_units": 2},
+            {"case_id": "B", "expected_value": 3, "resource_units": 1},
+        ],
+    })
+
+    assert response.status_code == 200
+    assert response.json()["experimental"] is True
+    assert response.json()["classical_baseline"]["selected_cases"] == ["A"]
+    assert response.json()["qaoa"]["available"] is False
+
+
+def test_unified_risk_api_uses_configured_review_action():
+    response = TestClient(app).post("/api/v1/intelligence/risk/evaluate", json={
+        "training_data": [
+            {"fraud": False, "features": {"pattern": False}},
+            {"fraud": False, "features": {"pattern": False}},
+            {"fraud": True, "features": {"pattern": True}},
+            {"fraud": True, "features": {"pattern": True}},
+        ],
+        "evidence": {"pattern": True},
+    })
+
+    assert response.status_code == 200
+    assert response.json()["risk_category"] == "High"
+    assert response.json()["payment_action"].startswith("None")
+    assert response.json()["ml_prediction"] is None

@@ -54,12 +54,12 @@ class ThresholdRequest(BaseModel):
 class InvestigationCase(BaseModel):
     case_id: str = Field(min_length=1)
     expected_value: float = Field(ge=0)
-    resource_units: int = Field(default=1, ge=1)
+    resource_units: int = Field(default=1, ge=1, le=1_000_000)
 
 
 class QuantumRequest(BaseModel):
     cases: List[InvestigationCase] = Field(min_length=1, max_length=18)
-    resource_limit: int = Field(ge=0)
+    resource_limit: int = Field(ge=0, le=1_000_000)
 
     @model_validator(mode="after")
     def validate_case_ids(self):

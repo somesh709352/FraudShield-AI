@@ -38,10 +38,31 @@ def analyze_anomaly(request: Dict[str, Any]) -> Dict[str, Any]:
         and request["candidate_beneficiary"] not in known_beneficiaries
     )
     timestamps = sorted(item["timestamp"] for item in history if item.get("timestamp"))
+    hour_counts: Dict[int, int] = {}
+    day_counts: Dict[str, int] = {}
+    for timestamp in timestamps:
+        hour_counts[timestamp.hour] = hour_counts.get(timestamp.hour, 0) + 1
+        day = timestamp.date().isoformat()
+        day_counts[day] = day_counts.get(day, 0) + 1
     gaps_hours = [
         (right - left).total_seconds() / 3600
         for left, right in zip(timestamps, timestamps[1:])
     ]
+    beneficiary_counts: Dict[str, int] = {}
+    for item in history:
+        beneficiary = item.get("beneficiary")
+        if beneficiary:
+            beneficiary_counts[beneficiary] = beneficiary_counts.get(beneficiary, 0) + 1
+    beneficiary_total = sum(beneficiary_counts.values())
+    beneficiary_entropy = -sum(
+        (count / beneficiary_total) * log(count / beneficiary_total, 2)
+        for count in beneficiary_counts.values()
+    ) if beneficiary_total else None
+    candidate_hour_count = (
+        hour_counts.get(request["candidate_timestamp"].hour, 0)
+        if request.get("candidate_timestamp") is not None
+        else None
+    )
     unusual = outside_iqr or exceeds_zscore
     return {
         "sample_size": len(amounts),
@@ -55,6 +76,8 @@ def analyze_anomaly(request: Dict[str, Any]) -> Dict[str, Any]:
             "normal_range": {"lower": lower, "upper": upper},
             "recent_moving_average": mean(amounts[-5:]),
             "median_inter_transaction_hours": median(gaps_hours) if gaps_hours else None,
+            "transactions_per_observed_day": len(timestamps) / len(day_counts) if day_counts else None,
+            "beneficiary_entropy_bits": beneficiary_entropy,
         },
         "candidate": {"amount": candidate, "z_score": zscore},
         "history_amounts": amounts,
@@ -62,6 +85,7 @@ def analyze_anomaly(request: Dict[str, Any]) -> Dict[str, Any]:
             "outside_iqr_range": outside_iqr,
             "exceeds_zscore_threshold": exceeds_zscore,
             "new_beneficiary": new_beneficiary,
+            "candidate_hour_observation_count": candidate_hour_count,
         },
         "status": "unusual_pattern" if unusual else "within_observed_range",
         "interpretation": "An unusual pattern requires context; it is not proof of fraud.",
@@ -216,12 +240,19 @@ def prioritize_cases(request: Dict[str, Any]) -> Dict[str, Any]:
             qubo[f"{variables[index]},{variables[other]}"] = 2 * penalty * coefficient * coefficients[other]
 
     best_classical = (0.0, 0, [])
-    best_qubo = (float("inf"), 0.0, 0, [])
+    classical_started = perf_counter()
     for selection in product((0, 1), repeat=count):
         used = sum(cost * bit for cost, bit in zip(costs, selection))
         value = sum(amount * bit for amount, bit in zip(values, selection))
         if used <= budget and (value > best_classical[0] or (value == best_classical[0] and used < best_classical[1])):
             best_classical = (value, used, list(selection))
+    classical_runtime_seconds = perf_counter() - classical_started
+
+    best_qubo = (float("inf"), 0.0, 0, [])
+    qubo_started = perf_counter()
+    for selection in product((0, 1), repeat=count):
+        used = sum(cost * bit for cost, bit in zip(costs, selection))
+        value = sum(amount * bit for amount, bit in zip(values, selection))
         residual = budget - used
         slack_value = residual if 0 <= residual < 1 << slack_bits else 0
         slack_selection = [(slack_value >> bit) & 1 for bit in range(slack_bits)]
@@ -235,6 +266,7 @@ def prioritize_cases(request: Dict[str, Any]) -> Dict[str, Any]:
                     energy += qubo[f"{variables[index]},{variables[other]}"]
         if energy < best_qubo[0]:
             best_qubo = (energy, value, used, list(selection))
+    qubo_runtime_seconds = perf_counter() - qubo_started
     runtime_seconds = perf_counter() - started_at
 
     classical_cases = [cases[i]["case_id"] for i, selected in enumerate(best_classical[2]) if selected]
@@ -247,7 +279,7 @@ def prioritize_cases(request: Dict[str, Any]) -> Dict[str, Any]:
             "objective_value": best_classical[0],
             "resources_used": best_classical[1],
             "solver": "Exact enumeration of the constrained selection problem",
-            "execution_time_seconds": runtime_seconds,
+            "execution_time_seconds": classical_runtime_seconds,
         },
         "qubo_result": {
             "selected_cases": qubo_cases,
@@ -255,7 +287,7 @@ def prioritize_cases(request: Dict[str, Any]) -> Dict[str, Any]:
             "resources_used": best_qubo[2],
             "qubo_energy": best_qubo[0],
             "solver": "Exact enumeration of case assignments with binary slack",
-            "execution_time_seconds": runtime_seconds,
+            "execution_time_seconds": qubo_runtime_seconds,
         },
         "qubo": {
             "variables": variables,
